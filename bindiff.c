@@ -2,6 +2,8 @@
 #include "locale.h"
 #include "wchar.h"
 
+#define LINELENGTH 0x10
+
 int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
@@ -26,11 +28,11 @@ int main(int argc, char *argv[])
             fwprintf(stderr, L"\x1B[0m");
             break;
         }
-        unsigned char bytes1[0xF] = {0}, bytes2[0xF] = {0};
+        unsigned char bytes1[LINELENGTH] = {0}, bytes2[LINELENGTH] = {0};
         size_t line = 0;
         do {
-            size_t read1 = fread(bytes1, 1, 0xF, file1);
-            size_t read2 = fread(bytes2, 1, 0xF, file2);
+            size_t read1 = fread(bytes1, 1, LINELENGTH, file1);
+            size_t read2 = fread(bytes2, 1, LINELENGTH, file2);
             size_t read = read1 > read2 ? read2 : read1;
             int diff = 0;
             for (size_t i = 0; i < read; ++i)
@@ -59,7 +61,7 @@ int main(int argc, char *argv[])
                 fwprintf(stderr, L"\x1B[0m");
                 break;
             }
-            ++line;
+            line += LINELENGTH;
         } while (!feof(file1) && !feof(file2));
     } while(0);
 
