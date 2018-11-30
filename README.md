@@ -1,6 +1,8 @@
 # bindiff
 binary file diff utility for Unicode enabled consoles
 
-# how to build
-
+# Build
 `gcc bindiff.c -o bindiff`
+
+# Usage
+`./bindiff file/one file/two | less -R`
