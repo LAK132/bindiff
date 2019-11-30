@@ -1,8 +1,44 @@
 #include "stdio.h"
+#include "stdlib.h"
 #include "locale.h"
 #include "wchar.h"
 
 #define LINELENGTH 0x10
+
+FILE *file[] = {NULL, NULL};
+
+void finish(int status)
+{
+  if (file[1]) fclose(file[1]);
+  if (file[2]) fclose(file[2]);
+  fwprintf(stdout, L"\x1B[0m");
+  exit(status);
+}
+
+void open_file(int file_number, const char *path)
+{
+  if (!(file[file_number] = fopen(path, "rb")))
+  {
+    fwprintf(stderr,
+             L"\x1B[31m\x1B[1mError opening file %i: \"%s\"\x1B[0m\n",
+             file_number,
+             path);
+    finish(EXIT_FAILURE);
+  }
+}
+
+void check_file_errors(int file_number)
+{
+  int err = ferror(file[file_number]);
+  if (err)
+  {
+    fwprintf(stderr,
+             L"\x1B[31m\x1B[1mError reading file %i: %i\x1B[0m\n",
+             file_number,
+             err);
+    finish(EXIT_FAILURE);
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -10,61 +46,72 @@ int main(int argc, char *argv[])
   fwide(stderr, 1);
   fwide(stdout, 1);
 
-  if (argc < 3) {
-    fwprintf(stderr, L"\x1B[31m\x1B[1m");
-    fwprintf(stderr, L"Too few arguments\n");
-    fwprintf(stderr, L"\x1B[0m");
-    return 1;
+  // Reset the graphics mode before we begin.
+  fwprintf(stdout, L"\x1B[0m");
+
+  if (argc < 3)
+  {
+    fwprintf(stderr, L"\x1B[31m\x1B[1mToo few arguments\x1B[0m\n");
+    finish(EXIT_FAILURE);
   }
 
-  FILE *file1 = NULL, *file2 = NULL;
+  open_file(1, argv[1]);
+  open_file(2, argv[2]);
 
-  do {
-    file1 = fopen(argv[1], "rb");
-    file2 = fopen(argv[2], "rb");
-    if (!file1 || !file2) {
-      fwprintf(stderr, L"\x1B[31m\x1B[1m");
-      fwprintf(stderr, L"Error opening file (%s %s)", file1 ? "" : argv[1], file2 ? "" : argv[2]);
-      fwprintf(stderr, L"\x1B[0m");
-      break;
-    }
-    unsigned char bytes1[LINELENGTH] = {0}, bytes2[LINELENGTH] = {0};
-    size_t line = 0;
-    do {
-      size_t read1 = fread(bytes1, 1, LINELENGTH, file1);
-      size_t read2 = fread(bytes2, 1, LINELENGTH, file2);
-      size_t read = read1 > read2 ? read2 : read1;
-      int diff = 0;
-      for (size_t i = 0; i < read; ++i)
-        if (bytes1[i] != bytes2[i])
-          { diff = 1; break; }
-      if (diff) {
-        fwprintf(stdout, L"\n\x1B[0m%08zX \x1B[32m", line);
-        for (size_t i = 0; i < read; ++i) {
-          if (bytes1[i] != bytes2[i])
-            fwprintf(stdout, L"\x1B[1m%02X ", bytes1[i]);
-          else
-            fwprintf(stdout, L"\x1B[2m%02X ", bytes1[i]);
-        }
-        fwprintf(stdout, L"\n\x1B[0m%08zX \x1B[31m", line);
-        for (size_t i = 0; i < read; ++i) {
-          if (bytes1[i] != bytes2[i])
-            fwprintf(stdout, L"\x1B[1m%02X ", bytes2[i]);
-          else
-            fwprintf(stdout, L"\x1B[2m%02X ", bytes2[i]);
-        }
-        fwprintf(stdout, L"\n\x1B[0m");
-      }
-      if (ferror(file1) || ferror(file2)) {
-        fwprintf(stderr, L"\x1B[31m\x1B[1m");
-        fwprintf(stderr, L"File error (%i %i)", ferror(file1), ferror(file2));
-        fwprintf(stderr, L"\x1B[0m");
+  fwprintf(stdout, L"\x1B[0mA: \x1B[32m%s\n", argv[1]);
+  fwprintf(stdout, L"\x1B[0mB: \x1B[31m%s\n", argv[2]);
+
+  unsigned char bytes1[LINELENGTH] = {0};
+  unsigned char bytes2[LINELENGTH] = {0};
+
+  for (size_t line = 0; !feof(file[1]) && !feof(file[2]); line += LINELENGTH)
+  {
+    size_t read1 = fread(bytes1, 1, LINELENGTH, file[1]);
+    size_t read2 = fread(bytes2, 1, LINELENGTH, file[2]);
+    size_t read = read1 > read2 ? read2 : read1;
+    int diff = 0;
+
+    for (size_t i = 0; i < read; ++i)
+    {
+      if (bytes1[i] != bytes2[i])
+      {
+        diff = 1;
         break;
       }
-      line += LINELENGTH;
-    } while (!feof(file1) && !feof(file2));
-  } while(0);
+    }
 
-  if (file1) fclose(file1);
-  if (file2) fclose(file2);
+    if (diff)
+    {
+      // Print green line (file 1).
+      fwprintf(stdout, L"\n\x1B[0m%08zX", line);
+
+      for (size_t i = 0; i < read; ++i)
+      {
+        fwprintf(stdout, L" \x1B[0m\x1B[32m");
+        if (bytes1[i] != bytes2[i])
+          fwprintf(stdout, L"\x1B[1m%02X", bytes1[i]);
+        else
+          fwprintf(stdout, L"\x1B[2m%02X", bytes1[i]);
+      }
+
+      // Print red line (file 2).
+      fwprintf(stdout, L"\n\x1B[0m%08zX", line);
+
+      for (size_t i = 0; i < read; ++i)
+      {
+        fwprintf(stdout, L" \x1B[0m\x1B[31m");
+        if (bytes1[i] != bytes2[i])
+          fwprintf(stdout, L"\x1B[1m%02X", bytes2[i]);
+        else
+          fwprintf(stdout, L"\x1B[2m%02X", bytes2[i]);
+      }
+
+      fwprintf(stdout, L"\n");
+    }
+
+    check_file_errors(1);
+    check_file_errors(2);
+  }
+
+  finish(EXIT_SUCCESS);
 }
