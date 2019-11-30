@@ -1,0 +1,5 @@
+bindiff
+*.elf
+*.out
+*.exe
+*.pdb
