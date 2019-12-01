@@ -9,8 +9,8 @@ FILE *file[] = {NULL, NULL};
 
 void finish(int status)
 {
+  if (file[0]) fclose(file[0]);
   if (file[1]) fclose(file[1]);
-  if (file[2]) fclose(file[2]);
   fwprintf(stdout, L"\x1B[0m");
   exit(status);
 }
@@ -21,7 +21,7 @@ void open_file(int file_number, const char *path)
   {
     fwprintf(stderr,
              L"\x1B[31m\x1B[1mError opening file %i: \"%s\"\x1B[0m\n",
-             file_number,
+             file_number + 1,
              path);
     finish(EXIT_FAILURE);
   }
@@ -34,7 +34,7 @@ void check_file_errors(int file_number)
   {
     fwprintf(stderr,
              L"\x1B[31m\x1B[1mError reading file %i: %i\x1B[0m\n",
-             file_number,
+             file_number + 1,
              err);
     finish(EXIT_FAILURE);
   }
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
     finish(EXIT_FAILURE);
   }
 
-  open_file(1, argv[1]);
-  open_file(2, argv[2]);
+  open_file(0, argv[1]);
+  open_file(1, argv[2]);
 
   fwprintf(stdout, L"\x1B[0mA: \x1B[32m%s\n", argv[1]);
   fwprintf(stdout, L"\x1B[0mB: \x1B[31m%s\n", argv[2]);
@@ -64,10 +64,10 @@ int main(int argc, char *argv[])
   unsigned char bytes1[LINELENGTH] = {0};
   unsigned char bytes2[LINELENGTH] = {0};
 
-  for (size_t line = 0; !feof(file[1]) && !feof(file[2]); line += LINELENGTH)
+  for (size_t line = 0; !feof(file[0]) && !feof(file[1]); line += LINELENGTH)
   {
-    size_t read1 = fread(bytes1, 1, LINELENGTH, file[1]);
-    size_t read2 = fread(bytes2, 1, LINELENGTH, file[2]);
+    size_t read1 = fread(bytes1, 1, LINELENGTH, file[0]);
+    size_t read2 = fread(bytes2, 1, LINELENGTH, file[1]);
     size_t read = read1 > read2 ? read2 : read1;
     int diff = 0;
 
@@ -109,8 +109,8 @@ int main(int argc, char *argv[])
       fwprintf(stdout, L"\n");
     }
 
+    check_file_errors(0);
     check_file_errors(1);
-    check_file_errors(2);
   }
 
   finish(EXIT_SUCCESS);
