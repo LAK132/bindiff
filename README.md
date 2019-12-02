@@ -5,4 +5,14 @@ binary file diff utility for Unicode enabled consoles
 `gcc bindiff.c -o bindiff`
 
 # Usage
-`./bindiff file/one file/two | less -R`
+Basic:
+
+`./bindiff <path/to/file/one> <path/to/file/two>`
+
+With less:
+
+`./bindiff <path/to/file/one> <path/to/file/two> | less -R`
+
+Output:
+
+![bindiff screenshot](bindiff.png)
