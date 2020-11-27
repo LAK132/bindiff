@@ -1,6 +1,6 @@
+#include "locale.h"
 #include "stdio.h"
 #include "stdlib.h"
-#include "locale.h"
 #include "wchar.h"
 
 #define LINELENGTH 0x10
@@ -68,8 +68,8 @@ int main(int argc, char *argv[])
   {
     size_t read1 = fread(bytes1, 1, LINELENGTH, file[0]);
     size_t read2 = fread(bytes2, 1, LINELENGTH, file[1]);
-    size_t read = read1 > read2 ? read2 : read1;
-    int diff = 0;
+    size_t read  = read1 > read2 ? read2 : read1;
+    int diff     = 0;
 
     for (size_t i = 0; i < read; ++i)
     {
