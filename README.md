@@ -2,7 +2,14 @@
 binary file diff utility for Unicode enabled consoles
 
 # Build
+
+## C
+
 `gcc bindiff.c -o bindiff`
+
+## Rust
+
+`rustc bindiff.rs -o bindiff`
 
 # Usage
 Basic:
